@@ -3,8 +3,9 @@ import { Question as QuestionComponent } from '../components/Question';
 import { ThemeNavigation } from '../components/ThemeNavigation';
 import { Theme, Question, SurveyResponse } from '../types/survey';
 import { ArrowRight } from 'lucide-react';
+import { useToast } from "@/components/ui/use-toast";
+import { saveSurveyProgress } from '../services/surveyApi';
 
-// Sample data - in a real app this would come from an API
 const themes: Theme[] = [
   {
     id: 'personal',
@@ -54,6 +55,8 @@ const Index = () => {
   const [currentTheme, setCurrentTheme] = useState(themes[0].id);
   const [responses, setResponses] = useState<SurveyResponse[]>([]);
   const [visibleQuestions, setVisibleQuestions] = useState<Question[]>([]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const { toast } = useToast();
 
   useEffect(() => {
     updateVisibleQuestions();
@@ -88,6 +91,54 @@ const Index = () => {
     return responses.find((r) => r.questionId === questionId)?.answer;
   };
 
+  const validateResponses = () => {
+    const unansweredQuestions = visibleQuestions.filter(
+      (question) => !responses.find((r) => r.questionId === question.id)
+    );
+
+    if (unansweredQuestions.length > 0) {
+      toast({
+        title: "Please answer all questions",
+        description: "Some questions are still unanswered.",
+        variant: "destructive",
+      });
+      return false;
+    }
+    return true;
+  };
+
+  const handleNext = async () => {
+    if (!validateResponses()) return;
+
+    setIsSubmitting(true);
+    console.log('Saving progress for theme:', currentTheme);
+
+    try {
+      await saveSurveyProgress(responses);
+      toast({
+        title: "Progress saved",
+        description: "Your answers have been saved successfully.",
+      });
+
+      // Find next theme
+      const currentThemeIndex = themes.findIndex((t) => t.id === currentTheme);
+      if (currentThemeIndex < themes.length - 1) {
+        const nextTheme = themes[currentThemeIndex + 1];
+        nextTheme.isCompleted = true;
+        setCurrentTheme(nextTheme.id);
+      }
+    } catch (error) {
+      console.error('Error saving progress:', error);
+      toast({
+        title: "Error",
+        description: "Failed to save your progress. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background p-8">
       <div className="max-w-7xl mx-auto">
@@ -109,16 +160,18 @@ const Index = () => {
                   question={question}
                   onAnswer={handleAnswer}
                   currentAnswer={getCurrentAnswer(question.id)}
+                  required={true}
                 />
               ))}
             </div>
 
             <div className="mt-8 flex justify-end">
               <button
-                className="bg-primary text-primary-foreground px-6 py-2 rounded-lg flex items-center gap-2 hover:opacity-90 transition-opacity"
-                onClick={() => console.log('Next theme')}
+                className="bg-primary text-primary-foreground px-6 py-2 rounded-lg flex items-center gap-2 hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
+                onClick={handleNext}
+                disabled={isSubmitting}
               >
-                Next
+                {isSubmitting ? 'Saving...' : 'Next'}
                 <ArrowRight size={16} />
               </button>
             </div>

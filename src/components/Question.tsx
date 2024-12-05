@@ -7,9 +7,10 @@ interface QuestionProps {
   question: QuestionType;
   onAnswer: (questionId: string, answer: string) => void;
   currentAnswer?: string;
+  required?: boolean;
 }
 
-export const Question = ({ question, onAnswer, currentAnswer }: QuestionProps) => {
+export const Question = ({ question, onAnswer, currentAnswer, required = false }: QuestionProps) => {
   const handleChange = (value: string) => {
     onAnswer(question.id, value);
   };
@@ -17,7 +18,10 @@ export const Question = ({ question, onAnswer, currentAnswer }: QuestionProps) =
   return (
     <div className="mb-8 animate-fade-in">
       <div className="mb-2">
-        <h3 className="text-lg font-medium mb-2">{question.text}</h3>
+        <h3 className="text-lg font-medium mb-2">
+          {question.text}
+          {required && <span className="text-red-500 ml-1">*</span>}
+        </h3>
         {question.info && <InfoBox content={question.info} />}
       </div>
 
@@ -40,6 +44,7 @@ export const Question = ({ question, onAnswer, currentAnswer }: QuestionProps) =
                 checked={currentAnswer === option}
                 onChange={(e) => handleChange(e.target.value)}
                 className="h-4 w-4 text-primary"
+                required={required}
               />
               <span className="text-sm">{option}</span>
             </label>
@@ -51,6 +56,7 @@ export const Question = ({ question, onAnswer, currentAnswer }: QuestionProps) =
           onChange={(e) => handleChange(e.target.value)}
           className="w-full min-h-[120px] p-3 rounded-lg border border-border focus:border-primary focus:ring-1 focus:ring-primary transition-all duration-200 resize-none"
           placeholder="Type your answer here..."
+          required={required}
         />
       )}
     </div>
